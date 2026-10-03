@@ -1,146 +1,90 @@
 # 3D Ray Tracer
 
-A lightweight 3D ray tracer implemented in C.  
-Supports vector math, ray–sphere intersections, Lambertian shading, hard shadows, anti-aliasing, and PPM output.  
-Designed as a clean, modular portfolio project.
+A small ray tracer written in C99 that renders sphere scenes to plain-text PPM images. The implementation is intentionally low-level: camera rays, sphere intersections, lighting, shadows, color conversion, and supersampling are implemented directly in C.
 
----
+<p align="center">
+  <img src="assets/main.png" alt="Ray-traced scene" width="45%" />
+  <img src="assets/FS11.png" alt="Ray-traced scene with final renderer" width="45%" />
+</p>
 
-## 📸 Sample Renders
+## What is implemented
 
-| Example 1 | Example 2 |
-|-----------|-----------|
-| ![Example 1](assets/main.png) | ![Example 2](assets/FS11.png) |
+- 3D vector addition, subtraction, scaling, normalization, dot products, distances, and lengths
+- ray generation from a pinhole camera through a configurable viewport
+- quadratic ray-sphere intersection with nearest positive-hit selection
+- nearest-object visibility across multiple spheres
+- Lambertian diffuse shading from a point light
+- inverse-square light falloff with intensity clamping
+- hard shadows using secondary shadow rays
+- 3 × 3 supersampling per pixel in the final renderer
+- hexadecimal palette parsing and RGB conversion
+- ASCII PPM output
 
----
+The scene format and rendering behavior below reflect the source currently in <code>src/</code>; planned features are intentionally not presented as implemented.
 
-## 📑 Index
+## Source layout
 
-- [Overview](#overview)
-- [Features](#features)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Scene File Format](#scene-file-format)
-- [File Structure](#file-structure)
-- [Example Results](#example-results)
-- [Roadmap](#roadmap)
-- [References](#references)
+~~~text
+3D-Ray-Tracer/
+├── src/
+│   ├── assg.c       # camera, scene parsing, ray generation, shading, render loop
+│   ├── vector.c     # Vec3 operations
+│   ├── vector.h
+│   ├── spheres.c    # sphere storage and ray-sphere intersection
+│   ├── spheres.h
+│   ├── color.c      # packed RGB conversion and PPM color output
+│   └── color.h
+├── assets/          # sample renders
+├── *_Testcases/     # assignment/sample inputs and expected outputs
+├── Makefile
+├── ppmcmp.py        # helper for comparing PPM output
+└── viewppm          # PPM viewing helper
+~~~
 
----
+## Build targets
 
-## Overview
+The checked-in Makefile uses GCC with C99, warnings-as-errors, and libm.
 
-This project implements a from-scratch ray tracer in C with a small standard library of vector and color utilities. It renders scenes of spheres under a point light with diffuse (Lambertian) shading, optional hard shadows, and 3×3 stratified anti-aliasing. Output images are written as `.ppm` for portability.
-
----
-
-## Features
-
-- **Vec3 math**: add/sub, dot, cross, normalization, scaling.
-- **Ray–sphere intersection**: robust quadratic solve; nearest positive hit.
-- **Lambertian shading**: inverse-square light falloff and clamping.
-- **Shadows**: shadow ray occlusion with configurable darkening factor.
-- **Color system**: HEX → RGB mapping and background color.
-- **Anti-aliasing**: 3×3 stratified sampling per pixel (9 spp).
-- **PPM writer**: simple plain-text image output.
-- **Modular codebase**: clear separation of vector, geometry, color, and main.
-
----
-
-## Installation
-
-```bash
-# Clone
-git clone https://github.com/MuhammadZain2005/3D-Ray-Tracer.git
+~~~bash
+git clone https://github.com/muhzain05/3D-Ray-Tracer.git
 cd 3D-Ray-Tracer
-
-# Build
 make
-# Executable(s) will be placed in ./bin
-```
+~~~
 
----
+It defines three executables:
+
+- <code>MS1_assg</code> — milestone-1 build
+- <code>MS2_assg</code> — milestone-2 build
+- <code>FS_assg</code> — final renderer with 3 × 3 supersampling
 
 ## Usage
 
-```bash
-./bin/raytracer <input_scene.txt> <output.ppm>
-```
-### Example
-```bash
-./bin/raytracer scenes/example.txt out.ppm
-./viewppm out.ppm
-```
+The renderer accepts an input scene and an output file:
 
----
+~~~bash
+./FS_assg path/to/input.txt output.ppm
+~~~
 
-## Scene File Format
+The scene parser expects, in order:
 
-Scene description is a simple, line-based text format. The canonical layout:
+1. image width and height
+2. viewport height
+3. focal length
+4. light position <code>x y z</code> and brightness
+5. number of palette colors
+6. one hexadecimal color per palette entry
+7. background-color index
+8. number of spheres
+9. one line per sphere: <code>x y z radius color_index</code>
 
-1. **Image width height**
-2. **Viewport height**
-3. **Focal length**
-4. **Light position (x y z) and brightness**
-5. **m** (number of colors)
-6. **m lines of HEX colors** (e.g., `#FFAA33`)
-7. **Background color index** (0-based into the palette above)
-8. **n** (number of spheres)
-9. **n lines of spheres**: `cx cy cz radius color_index`
+The camera is placed at the origin and the viewport lies along negative z.
 
-### Notes
-- Coordinates are in camera/world space; the camera looks toward −z from the origin.  
-- Brightness is a scalar used with inverse-square falloff.  
-- Color indices reference the earlier HEX palette.  
+## Implementation notes
 
----
+The final render path traces nine samples per pixel and averages their colors. A hit point is shaded from the surface normal and light direction; a secondary ray is then tested against the sphere set to apply a hard-shadow attenuation factor.
 
-## File Structure
+This repository originated as a graphics assignment and is kept public as a compact example of C, geometry, memory management, and a complete rendering pipeline.
 
-```
-3D-Ray-Tracer/
-│
-├─ src/                 # Source code
-│  ├─ assg.c            # Program entry point + render loop
-│  ├─ vector.c/h        # Vec3 math utilities
-│  ├─ spheres.c/h       # Sphere primitive + intersection
-│  └─ color.c/h         # HEX↔RGB, PPM writer
-│
-├─ assets/              # Example renders & reference images
-├─ *_Testcases/         # Sample inputs/outputs for verification
-├─ bin/                 # Build artifacts (executables)
-│
-├─ Makefile             # Build configuration
-├─ viewppm              # PPM viewer
-├─ ppmcmp.py            # PPM comparer (visual diff)
-└─ README.md
-```
+## Author
 
----
-
-## Example Results
-
-- **No AA**: Jagged edges along high-contrast boundaries.  
-- **3×3 AA**: Noticeably smoother silhouettes and gradients.  
-- **Shadows**: Hard contact shadows increase depth and realism.  
-
-Sample images live in `assets/`.
-
----
-
-## Roadmap
-
-- Multiple lights (point, directional).  
-- Specular highlights (Blinn–Phong) and reflections.  
-- Additional primitives (planes, triangles) and mesh loading.  
-- Acceleration structures (BVH) for performance on complex scenes.  
-- Tone mapping and gamma correction.  
-
----
-
-## References
-
-- Peter Shirley, *Fundamentals of Computer Graphics*  
-- Netpbm – PPM Specification  
-- Scratchapixel – Ray Tracing Essentials  
-
+Muhammad Zain Asad — [GitHub](https://github.com/muhzain05)
